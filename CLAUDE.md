@@ -78,29 +78,36 @@ selector de archivos del navegador.
 
 ## Arquitectura
 
-App estática, **sin backend**, sin paso de build. Se abre localmente (doble clic
-al `index.html`; si el navegador restringe algo al abrir por `file://`, correr
-un servidor estático simple como fallback, ej. `npx serve` o
-`python -m http.server`).
+App estática, **sin backend**, sin paso de build. **Destino de despliegue:
+Vercel** — por lo tanto siempre se va a visitar con internet disponible, así
+que no hay necesidad de vendorizar librerías para uso offline (esto revirtió
+una decisión anterior, ver nota abajo).
 
 ```
 creacion_grupos/
-  index.html          # estructura de la app
+  index.html          # estructura de la app, incluye <script> de CDN (Tailwind + SheetJS)
   app.js              # parseo Excel, algoritmo de balanceo, render, drag&drop, export
-  vendor/
-    xlsx.full.min.js  # SheetJS, vendorizado localmente (leer/escribir .xlsx sin internet)
-    tailwind.js        # build standalone de Tailwind, vendorizado localmente
   CLAUDE.md
-  Capstone 2026-2 (1-19).xlsx   # dato de ejemplo
 ```
 
+(No hay carpeta `vendor/`: se descartó al confirmar que el destino es Vercel.
+El Excel de ejemplo vive en la carpeta local del proyecto pero **no se versiona**
+— está en `.gitignore` por `*.xlsx`, nunca debe subirse al repo por tener datos
+reales de personas.)
+
 Decisiones de stack:
-- **Tailwind CSS** para estilos (vendorizado local, no CDN en vivo, para que
-  funcione offline).
+- **Tailwind CSS** vía CDN en vivo (Play CDN), con versión **pineada** en la
+  URL, no "latest" — para que la librería no cambie sola y rompa algo sin
+  avisar.
+- **SheetJS** (lectura/escritura de `.xlsx`) también vía CDN, versión pineada.
 - **JS vanilla**, sin framework.
-- **Drag & drop nativo** (HTML5 Drag and Drop API), sin librería externa —
-  la única dependencia real es SheetJS (necesaria para leer/escribir `.xlsx`
-  de verdad).
+- **Drag & drop nativo** (HTML5 Drag and Drop API), sin librería externa.
+
+> Nota: la decisión original era vendorizar Tailwind y SheetJS localmente
+> (carpeta `vendor/`) pensando en un caso de uso "abrir el HTML localmente sin
+> internet". Se descartó al confirmar que el proyecto se despliega en Vercel,
+> donde siempre hay internet disponible — usar CDN en vivo es más simple y
+> es exactamente lo que corresponde a ese destino.
 
 ## Flujo de la app
 
