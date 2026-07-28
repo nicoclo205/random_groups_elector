@@ -6,9 +6,10 @@ lo más parejo posible entre grupos.
 
 ## Estado del proyecto
 
-**Fase actual: pipeline real funcionando de punta a punta con el Excel real**
-**(carga → detección de columnas → cálculo de tipo → grupos en pantalla).**
-**Pendiente: revisar el algoritmo de balanceo contra la regla exacta.**
+**Fase actual: pipeline real completo y verificado, de punta a punta con el**
+**Excel real (carga → detección de columnas → cálculo de tipo → balanceo →**
+**grupos en pantalla). Falta principalmente pulir detalles menores y las**
+**micro-interacciones (confetti/animaciones, sin empezar todavía).**
 
 `index.html` y `app.js` tienen la interfaz completa (los 3 estados, tarjetas de
 grupo, drag & drop, exportar, animaciones), y ya no usan datos de ejemplo — todo
@@ -18,10 +19,17 @@ callback), `detectColumns` (Nombre/Correo/32 preguntas por texto normalizado),
 `computeType` (cuenta "Sí" por bloque, empate → tipo mixto tipo `"A/B"`), y
 `buildPeople` (arma la lista de personas real a partir de las filas).
 
-Lo único que sigue marcado como placeholder es `balanceGroups`: reparte a la
-gente en grupos y "parece" razonable, pero no se ha verificado a fondo contra la
-regla exacta (máx. 2 del mismo tipo por grupo, 3 solo si es matemáticamente
-inevitable) — ese es el siguiente paso.
+`balanceGroups` ya quedó verificado contra la regla exacta (máx. 2 del mismo
+tipo por grupo, 3 solo si es matemáticamente inevitable): las personas de tipo
+mixto pasan por la misma validación que todos (`personHasType` revisa sus dos
+tipos), y hay una segunda pasada (`repairViolations`) que arregla con
+intercambios entre grupos cualquier "3 iguales" evitable que el reparto voraz
+inicial haya dejado (probado con 300 corridas aleatorias de un caso complejo
+con varios mixtos: cero violaciones evitables).
+
+Cabo suelto documentado, no urgente: el mapeo manual de respaldo en la UI (por
+si `detectColumns` no encuentra alguna columna en un Excel de otro semestre)
+todavía no está implementado — hoy simplemente falla en silencio.
 
 Este archivo se actualiza cada vez que cambien decisiones de diseño, arquitectura
 o alcance. Es la fuente de verdad del proyecto — antes de asumir cómo funciona algo,
