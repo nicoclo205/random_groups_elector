@@ -85,6 +85,7 @@ const state = {
   size: 5,
   assign: {}, // personId -> índice de grupo (todos quedan siempre asignados a alguno)
   dragId: null,
+  pinnedId: null, // id de la persona "fijada" con clic, o null si ninguna
 };
 
 function initials(name) {
@@ -345,11 +346,36 @@ function personRow(person) {
     state.dragId = null;
     row.classList.remove("opacity-40");
   });
-  row.addEventListener("mouseenter", () => showHoverCard(person));
-  row.addEventListener("mouseleave", hideHoverCard);
+  row.addEventListener("mouseenter", () => {
+    if (state.pinnedId === null) showHoverCard(person);
+  });
+  row.addEventListener("mouseleave", () => {
+    if (state.pinnedId === null) hideHoverCard();
+  });
+  row.addEventListener("click", (e) => {
+    e.stopPropagation();
+    state.pinnedId = person.id;
+    showHoverCard(person);
+  });
 
   return row;
 }
+
+// La tarjeta misma tampoco debe cerrarse al hacer clic adentro (ej.
+// para seleccionar y copiar el correo) — detiene la propagación igual
+// que las filas.
+el.hoverCard.addEventListener("click", (e) => e.stopPropagation());
+
+// Al hacer clic en cualquier persona, la tarjeta queda "fijada" (no se
+// oculta al mover el mouse) hasta que se hace clic en cualquier otro
+// lado de la página. Los clics sobre una fila o sobre la tarjeta misma
+// detienen la propagación, así que este listener solo ve clics "fuera".
+document.addEventListener("click", () => {
+  if (state.pinnedId !== null) {
+    state.pinnedId = null;
+    hideHoverCard();
+  }
+});
 
 // Lee el grupo actual de `state.assign` en el momento del hover (no un
 // valor capturado al crear la fila), para que siga siendo correcto
