@@ -382,7 +382,7 @@ el.fileInput.addEventListener("change", () => {
   reader.onload = function () {
     const book = XLSX.read(reader.result, {type: "array"});
     
-    const sheetName = book.sheetNames[0];
+    const sheetName = book.SheetNames[0];
     const sheet = book.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(sheet, {header: 1, defval: null});
 
