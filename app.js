@@ -18,6 +18,58 @@ const el = {
   resetBtn: document.getElementById("resetBtn"),
 };
 
+const QUESTIONS = [
+  { type: "C", text: "Me gusta probar y revisar mis ideas antes de generar la solución final" },
+  { type: "C", text: "Me gusta analizar todo lo positivo y lo negativo de una solución potencial" },
+  { type: "C", text: "Antes de implementar una solución, me gusta desarrollar los pasos" },
+  { type: "C", text: "Me gusta generar criterios que se puedan utilizar para identificar la mejor opción" },
+  { type: "C", text: "Me gusta tomarme el tiempo para perfeccionar una idea" },
+  { type: "C", text: "Me gusta pensar en todas las cosas que necesito para implementar una idea" },
+  { type: "C", text: "Me gusta explorar las fortalezas y debilidades de una solución potencial" },
+  { type: "C", text: "Disfruto el análisis y esfuerzo que toma transformar un concepto en una idea accionable." },
+
+  { type: "D", text: "Me gusta tomar los pasos necesarios para accionar una idea" },
+  { type: "D", text: "Normalmente no dedico mucho tiempo en definir el problema a solucionar" },
+  { type: "D", text: "Disfruto ver que las cosas sucedan" },
+  { type: "D", text: "Realmente disfruto implementar una idea" },
+  { type: "D", text: "Disfruto poner mis ideas en acción" },
+  { type: "D", text: "Tengo poca paciencia para refinar o pulir una idea" },
+  { type: "D", text: "Tiendo a buscar una solución rápida y ejecutarla"},
+  { type: "D", text: "Me desespera ver que las cosas no se están ejecutando" },
+
+  { type: "A", text: "Me gusta tomarme el tiempo para clarificar la naturaleza exacta del problema" },
+  { type: "A", text: "Me gusta analizar un problema desde diferentes ángulos" },
+  { type: "A", text: "Me gusta identificar los hechos más relevantes de un problema" },
+  { type: "A", text: "Disfruto identificar formas únicas de entender un problema" },
+  { type: "A", text: "Me gusta enfocarme en formular un enunciado que precise el problema" },
+  { type: "A", text: "Me gusta enfocarme en la información clave alrededor de la situación de reto" },
+  { type: "A", text: "Antes de avanzar me gusta tener un entendimiento clave del problema" },
+  { type: "A", text: "Disfruto reunir información para identificar las causas clave de un problema" },
+
+  { type: "B", text: "Generalmente abordo los problemas de manera creativa" },
+  { type: "B", text: "Se me facilita generar ideas inusuales para resolver problemas"},
+  { type: "B", text: "Me gusta generar muchas ideas" },
+  { type: "B", text: "Disfruto esforzar mi imaginación para producir muchas ideas"},
+  { type: "B", text: "Se me hace difícil ejecutar mis ideas" },
+  { type: "B", text: "Me gusta trabajar con ideas únicas" },
+  { type: "B", text: "Mi tendencia natural es generar muchísimas ideas para resolver problemas" },
+  { type: "B", text: "Disfruto usar metáforas y analogías para generar nuevas ideas para solucionar problemas" },
+];
+
+function normalizeText(text) {
+  return text
+    .toString()
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .split("")
+    .filter((ch) => {
+      const code = ch.charCodeAt(0);
+      return code < 0x300 || code > 0x36f;
+    })
+    .join("");
+}
+
 // ---- Catálogo de tipos (colores definidos en index.html vía @theme) ----
 const TYPES = {
   A: { name: "Clarificador", bg: "bg-type-a", fg: "text-type-a-fg", line: "bg-type-a-line", ring: "ring-type-a-line" },
@@ -43,23 +95,65 @@ function initials(name) {
 // TODO — lo vemos juntos: LÓGICA REAL (reemplaza estos placeholders)
 // =====================================================================
 
-// TODO: leer el archivo con FileReader + XLSX.read (ver CLAUDE.md,
-// ojo que la fila 2 tiene los encabezados reales, no la fila 1).
-function parseExcelFile(file) {
-  console.warn("TODO: parsear el Excel real. Por ahora no devuelve a nadie.");
-  return [];
+// Lee el archivo y entrega las filas crudas a `onDone` (asíncrono: no
+// se puede devolver con `return`, ver CLAUDE.md — ojo que la fila 2
+// tiene los encabezados reales, no la fila 1).
+function parseExcelFile(file, onDone) {
+  const reader = new FileReader();
+  reader.onload = function () {
+    const book = XLSX.read(reader.result, { type: "array" });
+    const sheetName = book.SheetNames[0];
+    const sheet = book.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+    onDone(rows);
+  };
+  reader.readAsArrayBuffer(file);
 }
 
-// TODO: detectar columnas de Nombre / Correo / las 32 preguntas por
-// texto de encabezado normalizado (trim + sin tildes/mayúsculas).
+// Detecta en qué columna del Excel quedó cada dato que nos interesa,
+// por texto normalizado (trim + sin tildes/mayúsculas) — no por
+// posición, para seguir funcionando si el formulario reordena las
+// preguntas en otro semestre.
 function detectColumns(headerRow) {
-  console.warn("TODO: detección de columnas por texto.");
+  const nameIndex = headerRow.findIndex((cell) => normalizeText(cell) === "nombre");
+  const emailIndex = headerRow.findIndex((cell) => normalizeText(cell) === "correo electronico");
+  const questionColumns = QUESTIONS.map((q) => ({
+    type: q.type,
+    index: headerRow.findIndex((cell) => normalizeText(cell) === normalizeText(q.text)),
+  }));
+
+  return { nameIndex, emailIndex, questionColumns };
 }
 
-// TODO: contar "Sí" por bloque (A/B/C/D, ver tabla de mapeo en
-// CLAUDE.md) y asignar el tipo de mayor conteo; empate -> tipo mixto.
-function computeType(answers) {
-  console.warn("TODO: cálculo de tipo por persona.");
+function computeType(row, columns) {
+  const counts = {A:0, B:0, C:0, D:0};
+
+  columns.questionColumns.forEach((q) => {
+    const answer = row[q.index];
+    if (normalizeText(answer) === "si") {
+      counts[q.type]++;
+    }
+  });
+
+  const maxCount = Math.max(counts.A, counts.B, counts.C, counts.D); 
+  const topTypes = Object.keys(counts).filter((t) => counts[t] === maxCount);
+
+  return topTypes.join("/");
+}
+
+function buildPeople(rows, columns) {
+  const dataRows = rows.slice(2);
+
+  return dataRows.filter((row) => row[columns.nameIndex]).map((row, i) => {
+    const type = computeType(row, columns);
+    return{
+      id: i+1,
+      name: row[columns.nameIndex],
+      mail: row[columns.emailIndex],
+      type,
+      mixed: type.includes("/")
+    };
+  });
 }
 
 // TODO — placeholder: algoritmo de balanceo provisional, inspirado en
@@ -377,18 +471,14 @@ function downloadBlob(name, blob) {
 el.fileInput.addEventListener("change", () => {
   const file = el.fileInput.files[0];
   if (!file) return;
-  
-  const reader = new FileReader();
-  reader.onload = function () {
-    const book = XLSX.read(reader.result, {type: "array"});
+
+  parseExcelFile(file, (rows) => {
+    const headerRow = rows[1];
+    const columns = detectColumns(headerRow);
+    const people = buildPeople(rows, columns);
     
-    const sheetName = book.SheetNames[0];
-    const sheet = book.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json(sheet, {header: 1, defval: null});
-
-    console.log(rows);
-  };
-
+    startLoading(people, `Leyendo ${file.name}…`);
+  });
 });
 
 el.sizeInc.addEventListener("click", () => {
