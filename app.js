@@ -573,7 +573,7 @@ el.fileInput.addEventListener("change", () => {
     const columns = detectColumns(headerRow);
     const people = buildPeople(rows, columns);
     
-    startLoading(people, `Leyendo ${file.name}…`);
+    startLoading(people, "Pensando...");
   });
 });
 
