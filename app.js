@@ -156,14 +156,87 @@ function buildPeople(rows, columns) {
   });
 }
 
-// TODO — placeholder: algoritmo de balanceo provisional, inspirado en
-// el mockup de Claude Design. Hay que revisarlo juntos contra la regla
-// exacta del CLAUDE.md (máx. 2 por tipo, 3 solo si es matemáticamente
-// inevitable) antes de darlo por definitivo. Los tipos mixtos se
-// reparten al final entre los grupos más chicos, junto con todos los
-// demás (ver CLAUDE.md — decisión revisada, ya no quedan sin asignar).
+// ¿Esta persona cuenta como del tipo `t`? Para una persona mixta
+// (ej. "A/B") revisa sus dos tipos, no solo el string completo.
+function personHasType(person, t) {
+  return person.mixed ? person.type.split("/").includes(t) : person.type === t;
+}
+
+function countType(group, t) {
+  return group.filter((p) => personHasType(p, t)).length;
+}
+
+// Repara "3 iguales" evitables que el reparto voraz pudo haber dejado
+// (el reparto decide grupo por grupo sin poder replanificar hacia
+// atrás, así que a veces se acorrala en una esquina donde ya no cabe
+// nadie, aunque reordenando desde el principio sí hubiera cabido).
+// Busca, para cada grupo con 3+ del mismo tipo, a alguien de otro
+// grupo con quien intercambiar sin crear una violación nueva en
+// ningún tipo, en ninguno de los dos grupos.
+function repairViolations(groups, assign) {
+  const TYPE_KEYS = ["A", "B", "C", "D"];
+  let improved = true;
+  let iterations = 0;
+
+  while (improved && iterations < 50) {
+    improved = false;
+    iterations++;
+
+    for (let gi = 0; gi < groups.length; gi++) {
+      const overTypes = TYPE_KEYS.filter((t) => countType(groups[gi], t) >= 3);
+
+      overTypes.forEach((t) => {
+        const candidates = groups[gi].filter((p) => personHasType(p, t));
+        let fixed = false;
+
+        candidates.forEach((person) => {
+          if (fixed) return;
+          for (let gj = 0; gj < groups.length && !fixed; gj++) {
+            if (gj === gi) continue;
+
+            for (const other of groups[gj]) {
+              const giOk = TYPE_KEYS.every((tt) => {
+                const current = countType(groups[gi], tt);
+                const removed = personHasType(person, tt) ? 1 : 0;
+                const added = personHasType(other, tt) ? 1 : 0;
+                return current - removed + added < 3;
+              });
+              const gjOk = TYPE_KEYS.every((tt) => {
+                const current = countType(groups[gj], tt);
+                const removed = personHasType(other, tt) ? 1 : 0;
+                const added = personHasType(person, tt) ? 1 : 0;
+                return current - removed + added < 3;
+              });
+
+              if (giOk && gjOk) {
+                const pi = groups[gi].indexOf(person);
+                const pj = groups[gj].indexOf(other);
+                groups[gi][pi] = other;
+                groups[gj][pj] = person;
+                assign[person.id] = gj;
+                assign[other.id] = gi;
+                fixed = true;
+                improved = true;
+                break;
+              }
+            }
+            if (fixed) break;
+          }
+        });
+      });
+    }
+  }
+}
+
+// Reparte a todas las personas en grupos, respetando máx. 2 del mismo
+// tipo por grupo (3 solo si es matemáticamente inevitable — ver
+// CLAUDE.md). Los tipos mixtos pasan por la misma validación que
+// todos los demás, revisando sus dos tipos a la vez (antes se
+// ubicaban sin revisar nada, lo cual podía generar un "3 iguales"
+// evitable).
 function balanceGroups(people, size) {
   const solo = people.filter((p) => !p.mixed);
+  const mixed = people.filter((p) => p.mixed);
   const groupCount = Math.max(1, Math.ceil(people.length / size));
   const base = Math.floor(people.length / groupCount);
   const rem = people.length % groupCount;
@@ -178,33 +251,30 @@ function balanceGroups(people, size) {
   const assign = {};
   let cursor = 0;
 
-  order.forEach((t) => {
-    buckets[t].forEach((p) => {
-      let placed = false;
-      for (let maxSameType = 2; maxSameType <= 5 && !placed; maxSameType++) {
-        for (let k = 0; k < groupCount; k++) {
-          const i = (cursor + k) % groupCount;
-          const sameTypeCount = groups[i].filter((x) => x.type === t).length;
-          if (groups[i].length < cap[i] && sameTypeCount < maxSameType) {
-            groups[i].push(p);
-            assign[p.id] = i;
-            cursor = i + 1;
-            placed = true;
-            break;
-          }
+  function place(person, types) {
+    let placed = false;
+    for (let maxSameType = 2; maxSameType <= 5 && !placed; maxSameType++) {
+      for (let k = 0; k < groupCount; k++) {
+        const i = (cursor + k) % groupCount;
+        const fits = types.every((t) => groups[i].filter((x) => personHasType(x, t)).length < maxSameType);
+        if (groups[i].length < cap[i] && fits) {
+          groups[i].push(person);
+          assign[person.id] = i;
+          cursor = i + 1;
+          placed = true;
+          break;
         }
       }
-    });
+    }
+  }
+
+  order.forEach((t) => {
+    buckets[t].forEach((p) => place(p, [t]));
   });
 
-  people.filter((p) => p.mixed).forEach((p) => {
-    let smallest = 0;
-    for (let i = 1; i < groupCount; i++) {
-      if (groups[i].length < groups[smallest].length) smallest = i;
-    }
-    groups[smallest].push(p);
-    assign[p.id] = smallest;
-  });
+  mixed.sort(() => Math.random() - 0.5).forEach((p) => place(p, p.type.split("/")));
+
+  repairViolations(groups, assign);
 
   return assign;
 }
