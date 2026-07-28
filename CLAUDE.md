@@ -6,11 +6,24 @@ lo más parejo posible entre grupos.
 
 ## Estado del proyecto
 
-**Fase actual: diseño acordado, implementación aún no iniciada.**
+**Fase actual: interfaz implementada con datos de ejemplo; lógica real pendiente.**
+
+`index.html` y `app.js` ya tienen la interfaz completa (los 3 estados, tarjetas de
+grupo, drag & drop, exportar, animaciones), pero usando `DEMO_PEOPLE` (40 personas
+ficticias) en vez del Excel real. Las funciones que faltan están marcadas con
+`TODO — lo vemos juntos` en `app.js`: `parseExcelFile`, `detectColumns`,
+`computeType`, y revisar `balanceGroups` (hoy es un placeholder razonable pero no
+verificado contra la regla exacta de abajo).
 
 Este archivo se actualiza cada vez que cambien decisiones de diseño, arquitectura
 o alcance. Es la fuente de verdad del proyecto — antes de asumir cómo funciona algo,
 leer este archivo.
+
+**Quién implementa qué**: el usuario escribe la lógica real (parseo, detección de
+columnas, cálculo de tipo, algoritmo de balanceo definitivo) con guía paso a paso;
+Claude implementó la capa de interfaz/diseño directamente, a pedido explícito del
+usuario, a partir de un diseño hecho en Claude Design (no del mockup de fuentes
+anterior, que quedó descartado).
 
 ## Objetivo
 
@@ -116,7 +129,7 @@ Decisiones de stack:
    de preguntas (por texto, ver tabla de mapeo arriba); si falla, mapeo manual
    en la UI.
 3. **Calcular tipo por persona** — contar "Sí" por bloque (A/B/C/D) y asignar el
-   de mayor conteo. Empate entre bloques: **decisión pendiente**, ver abajo.
+   de mayor conteo. Empate entre bloques: tipo **mixto** (ver "Decisiones cerradas").
 4. **Configurar tamaño de grupo** — campo numérico, default 5.
 5. **Algoritmo de balanceo**:
    - Calcular número de grupos y tamaños (diferencia máx. 1 entre grupos).
@@ -129,18 +142,42 @@ Decisiones de stack:
 8. **Exportar** — botón para descargar el resultado final (post-ajustes) como
    Excel o CSV.
 
-## Dirección de diseño visual
+## Diseño visual (implementado)
 
 Objetivo explícito del usuario: "algo chévere y entretenido", no solo funcional.
-Líneas propuestas (ajustables una vez se vea la primera versión):
+El diseño real vino de un proyecto en **Claude Design** ("Diseño página crear
+grupos", `Creacion de Grupos.dc.html`) — el archivo `.dc.html` en sí no es
+usable tal cual (depende de un runtime propio sobre React, `support.js`), así
+que se tradujo a mano a HTML + Tailwind + JS vanilla, manteniendo look, estados
+y animaciones.
 
-- Paleta de color distintiva y consistente por tipo (misma leyenda en toda la app).
-- Avatares con iniciales, coloreados por tipo.
-- Animaciones suaves al arrastrar/soltar (lift al hover, transición al soltar).
-- Confetti u otra micro-interacción de celebración cuando el resultado queda sin
-  ninguna violación de la regla de máx. 2 por tipo.
-- Botón de "reordenar" con animación, no solo un refresh estático.
-- Leyenda de tipos editable (nombre/emoji por tipo), en vez de mapeo fijo.
+**Tipografía**: `Bricolage Grotesque` (títulos, vía Google Fonts) + `Karla`
+(texto). Cargadas por `<link>` a Google Fonts (no vendorizadas — mismo criterio
+que Tailwind/SheetJS: destino Vercel, siempre hay internet).
+
+**Colores por tipo**: definidos en OKLCH como tokens de `@theme` de Tailwind v4
+en `index.html` (`--color-type-a/b/c/d` + su `-fg` de texto y `-line` de acento),
+un tono pastel por tipo con su texto a juego. Ver `index.html` para los valores
+exactos. (Esto reemplaza la paleta hex que yo había validado antes con el
+checker de daltonismo — se prefirió el diseño real por encima de mi borrador.)
+
+**Estados de la app** (nuevo respecto al plan original, buena adición del
+diseño): `void` (sin datos — pantalla oscura tipo portada con el input de
+archivo y botón de "usar datos de ejemplo") → `reading` (spinner mientras
+"lee" el archivo) → `loaded` (dashboard claro con header pegajoso, contador de
+tamaño, botón "Rebarajar" con giro, exportar CSV/Excel, leyenda, tarjetas de
+grupo, bandeja de "tipos mixtos" sin asignar, tarjeta flotante al pasar el
+mouse sobre una persona con su detalle).
+
+Ya implementado: avatares con iniciales coloreados por tipo (degradado a dos
+colores para tipo mixto), animaciones al arrastrar/soltar y al aparecer las
+tarjetas, aviso visual (borde + texto) cuando un grupo queda con 3 del mismo
+tipo, botón de reordenar con animación de giro.
+
+**Pendiente/no implementado todavía**: confetti u otra celebración cuando el
+resultado queda sin violaciones (tarea #13 del roadmap); leyenda de tipos
+editable (nombre/emoji por tipo) — hoy el nombre de cada tipo es fijo
+(Clarificador/Ideador/Desarrollador/Implementador).
 
 ## Decisiones cerradas relevantes
 
