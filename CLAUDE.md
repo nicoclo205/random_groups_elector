@@ -6,16 +6,22 @@ lo más parejo posible entre grupos.
 
 ## Estado del proyecto
 
-**Fase actual: interfaz implementada; siguiente paso es la lógica real (parseo del Excel).**
+**Fase actual: pipeline real funcionando de punta a punta con el Excel real**
+**(carga → detección de columnas → cálculo de tipo → grupos en pantalla).**
+**Pendiente: revisar el algoritmo de balanceo contra la regla exacta.**
 
-`index.html` y `app.js` ya tienen la interfaz completa (los 3 estados, tarjetas de
-grupo, drag & drop, exportar, animaciones). Ya **no hay datos de ejemplo** en la
-app (se quitaron `DEMO_PEOPLE` y el botón de "usar datos de ejemplo") — sin un
-Excel real cargado, la app no muestra a nadie. Las funciones que faltan están
-marcadas con `TODO — lo vemos juntos` en `app.js`: `parseExcelFile`,
-`detectColumns`, `computeType`, y revisar `balanceGroups` (hoy es un placeholder
-razonable pero no verificado contra la regla exacta de abajo). El trabajo que
-sigue es justo `parseExcelFile` (leer el archivo con FileReader + SheetJS).
+`index.html` y `app.js` tienen la interfaz completa (los 3 estados, tarjetas de
+grupo, drag & drop, exportar, animaciones), y ya no usan datos de ejemplo — todo
+sale del Excel real que el usuario carga. Implementado y probado con datos
+reales: `parseExcelFile` (FileReader + XLSX.read + sheet_to_json, asíncrono vía
+callback), `detectColumns` (Nombre/Correo/32 preguntas por texto normalizado),
+`computeType` (cuenta "Sí" por bloque, empate → tipo mixto tipo `"A/B"`), y
+`buildPeople` (arma la lista de personas real a partir de las filas).
+
+Lo único que sigue marcado como placeholder es `balanceGroups`: reparte a la
+gente en grupos y "parece" razonable, pero no se ha verificado a fondo contra la
+regla exacta (máx. 2 del mismo tipo por grupo, 3 solo si es matemáticamente
+inevitable) — ese es el siguiente paso.
 
 Este archivo se actualiza cada vez que cambien decisiones de diseño, arquitectura
 o alcance. Es la fuente de verdad del proyecto — antes de asumir cómo funciona algo,
@@ -50,7 +56,7 @@ ejemplo). Es el instrumento **FourSight** (32 afirmaciones Sí/No repartidas en
   (`Pregunta` y `Tipo de persona creativa` — ver advertencia abajo, es engañoso).
 - **Fila 2**: encabezados reales — `ID`, `Hora de inicio`, `Hora de finalización`,
   `Correo electrónico`, `Nombre`, `Hora de la última modificación`, y las 32
-  preguntas Sí/No del test, en 4 bloques contiguos de 8-9 preguntas cada uno.
+  preguntas Sí/No del test, en 4 bloques contiguos de 8 preguntas cada uno.
 - **Filas siguientes**: una persona por fila, con sus respuestas Sí/No.
 
 ### ⚠️ Trampa encontrada: NO existe un tipo precalculado por persona
