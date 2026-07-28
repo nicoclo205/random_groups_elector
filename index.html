@@ -35,60 +35,53 @@
         --color-warn: oklch(0.55 0.12 35);
         --color-warn-line: oklch(0.82 0.09 40);
         --color-good: oklch(0.55 0.08 155);
+
+        --font-body: 'Karla', system-ui, sans-serif;
+        --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
+
+        --animate-breathe: breathe 9s ease-in-out infinite;
+        @keyframes breathe { 0%,100% { opacity:.5; transform: scale(1); } 50% { opacity:.85; transform: scale(1.06); } }
+
+        --animate-glimmer: glimmer 3.4s ease-in-out infinite;
+        @keyframes glimmer { 0%,100% { opacity:.25; } 50% { opacity:.6; } }
+
+        --animate-dawn: dawn 0.5s ease both;
+        @keyframes dawn { from { opacity:0; } to { opacity:1; } }
+
+        --animate-rise: rise .6s cubic-bezier(.22,1,.36,1) both;
+        @keyframes rise { from { opacity:0; transform: translateY(14px) scale(.97); } to { opacity:1; transform:none; } }
       }
-
-      body { font-family: 'Karla', system-ui, sans-serif; }
-      .font-display { font-family: 'Bricolage Grotesque', system-ui, sans-serif; }
-
-      .chip-a { background: var(--color-type-a); color: var(--color-type-a-fg); }
-      .chip-b { background: var(--color-type-b); color: var(--color-type-b-fg); }
-      .chip-c { background: var(--color-type-c); color: var(--color-type-c-fg); }
-      .chip-d { background: var(--color-type-d); color: var(--color-type-d-fg); }
-      .line-a { background: var(--color-type-a-line); }
-      .line-b { background: var(--color-type-b-line); }
-      .line-c { background: var(--color-type-c-line); }
-      .line-d { background: var(--color-type-d-line); }
-      .dot-a { background: var(--color-type-a); box-shadow: inset 0 0 0 1px var(--color-type-a-line); }
-      .dot-b { background: var(--color-type-b); box-shadow: inset 0 0 0 1px var(--color-type-b-line); }
-      .dot-c { background: var(--color-type-c); box-shadow: inset 0 0 0 1px var(--color-type-c-line); }
-      .dot-d { background: var(--color-type-d); box-shadow: inset 0 0 0 1px var(--color-type-d-line); }
-
-      @keyframes breathe { 0%,100% { opacity:.5; transform: scale(1); } 50% { opacity:.85; transform: scale(1.06); } }
-      @keyframes glimmer { 0%,100% { opacity:.25; } 50% { opacity:.6; } }
-      @keyframes dawn { from { opacity:0; } to { opacity:1; } }
-      @keyframes rise { from { opacity:0; transform: translateY(14px) scale(.97); } to { opacity:1; transform:none; } }
-
-      .animate-breathe { animation: breathe 9s ease-in-out infinite; }
-      .animate-glimmer { animation: glimmer 3.4s ease-in-out infinite; }
-      .animate-dawn { animation: dawn 1.2s ease both; }
-      .animate-rise { animation: rise .6s cubic-bezier(.22,1,.36,1) both; }
     </style>
 </head>
-<body class="min-h-screen bg-paper text-ink">
+<body class="min-h-screen bg-paper text-ink font-body">
 
-    <!-- ESTADO 1: sin datos cargados -->
-    <section id="phase-void" class="min-h-screen flex flex-col items-center justify-center relative px-6 py-12 bg-void text-cream overflow-hidden">
-        <div class="absolute w-[900px] h-[900px] rounded-full pointer-events-none animate-breathe" style="background: radial-gradient(circle, rgba(233,224,205,.16) 0%, rgba(233,224,205,.05) 38%, transparent 68%);"></div>
-        <div class="relative flex flex-col items-center gap-8 text-center max-w-2xl">
-            <div class="text-[11px] tracking-[0.34em] uppercase text-cream/35">Capstone</div>
-            <h1 class="font-display font-normal text-5xl sm:text-6xl md:text-7xl leading-none tracking-tight text-cream">Creación de grupos</h1>
-            <div class="flex flex-col items-center gap-4 mt-1">
-                <label class="flex items-center gap-3.5 pl-6 pr-8 py-4 border border-dashed border-cream/25 rounded-full cursor-pointer text-cream/80 text-[14.5px] transition-all duration-300 hover:border-cream/55 hover:bg-cream/5 hover:text-cream whitespace-nowrap">
-                    <span class="w-2.5 h-2.5 rounded-full bg-cream animate-glimmer"></span>
-                    Arrastra el archivo .xlsx o haz clic
-                    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" class="hidden">
-                </label>
-                <button id="demoBtn" class="bg-transparent border-none py-1.5 px-0.5 text-cream/35 text-[13px] cursor-pointer tracking-wide border-b border-cream/15 transition-colors duration-300 hover:text-cream hover:border-cream/50">
-                    usar datos de ejemplo — 40 personas
-                </button>
+    <!-- Capa negra fija: cubre "sin datos" y "leyendo". Solo ella se
+         desvanece (al pasar a "cargado"); el cambio entre sus dos
+         contenidos internos es instantáneo, sin transición. -->
+    <section id="phaseCover" class="fixed inset-0 z-50 flex items-center justify-center bg-void text-cream overflow-hidden transition-opacity duration-700">
+
+        <!-- ESTADO 1: sin datos cargados -->
+        <div id="phase-void" class="relative flex flex-col items-center justify-center px-6 py-12">
+            <div class="absolute w-[900px] h-[900px] rounded-full pointer-events-none animate-breathe" style="background: radial-gradient(circle, rgba(233,224,205,.16) 0%, rgba(233,224,205,.05) 38%, transparent 68%);"></div>
+            <div class="relative flex flex-col items-center gap-8 text-center max-w-2xl">
+                <div class="text-[11px] tracking-[0.34em] uppercase text-cream/35">Capstone</div>
+                <h1 class="font-display font-normal text-5xl sm:text-6xl md:text-7xl leading-none tracking-tight text-cream">Creación de grupos</h1>
+                <div class="flex flex-col items-center gap-4 mt-1">
+                    <label class="flex items-center gap-3.5 pl-6 pr-8 py-4 border border-dashed border-cream/25 rounded-full cursor-pointer text-cream/80 text-[14.5px] transition-all duration-300 hover:border-cream/55 hover:bg-cream/5 hover:text-cream whitespace-nowrap">
+                        <span class="w-2.5 h-2.5 rounded-full bg-cream animate-glimmer"></span>
+                        Arrastra el archivo .xlsx o haz clic
+                        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" class="hidden">
+                    </label>
+                </div>
             </div>
         </div>
-    </section>
 
-    <!-- ESTADO 2: leyendo -->
-    <section id="phase-reading" class="hidden min-h-screen flex-col items-center justify-center gap-6 bg-void text-cream">
-        <div class="w-3.5 h-3.5 rounded-full bg-cream animate-breathe" style="animation-duration:1.1s"></div>
-        <div id="readingLabel" class="font-display text-2xl tracking-tight text-cream/70">Leyendo...</div>
+        <!-- ESTADO 2: leyendo -->
+        <div id="phase-reading" class="hidden flex-col items-center justify-center gap-6">
+            <div class="w-3.5 h-3.5 rounded-full bg-cream animate-breathe" style="animation-duration:1.1s"></div>
+            <div id="readingLabel" class="font-display text-2xl tracking-tight text-cream/70">Leyendo...</div>
+        </div>
+
     </section>
 
     <!-- ESTADO 3: grupos cargados -->
@@ -101,9 +94,9 @@
                 <div class="flex items-center gap-2.5">
                     <span class="text-[12.5px] text-ink/50">Tamaño</span>
                     <div class="flex items-center gap-0.5 bg-ink/5 rounded-full p-1">
-                        <button id="sizeDec" class="w-7 h-7 rounded-full leading-none text-base text-ink/55 hover:bg-white hover:text-ink transition">−</button>
+                        <button id="sizeDec" class="w-7 h-7 rounded-full leading-none text-base text-ink/55 hover:bg-ink hover:text-paper transition">−</button>
                         <span id="sizeVal" class="min-w-[22px] inline-block text-center text-[15px] font-medium">5</span>
-                        <button id="sizeInc" class="w-7 h-7 rounded-full leading-none text-base text-ink/55 hover:bg-white hover:text-ink transition">+</button>
+                        <button id="sizeInc" class="w-7 h-7 rounded-full leading-none text-base text-ink/55 hover:bg-ink hover:text-paper transition">+</button>
                     </div>
                 </div>
 
@@ -112,8 +105,8 @@
                 </button>
 
                 <div class="flex gap-2">
-                    <button id="exportCsvBtn" class="border border-ink/15 rounded-full px-4 py-2.5 text-[13px] hover:bg-ink/5 transition">CSV</button>
-                    <button id="exportXlsxBtn" class="border border-ink/15 rounded-full px-4 py-2.5 text-[13px] hover:bg-ink/5 transition">Excel</button>
+                    <button id="exportCsvBtn" class="border border-ink/15 rounded-full px-4 py-2.5 text-[13px] hover:bg-ink hover:text-paper transition">CSV</button>
+                    <button id="exportXlsxBtn" class="border border-ink/15 rounded-full px-4 py-2.5 text-[13px] hover:bg-ink hover:text-paper transition">Excel</button>
                     <button id="resetBtn" class="flex items-center gap-1.5 rounded-full px-4 py-2.5 text-[13px] text-ink/45 hover:text-[oklch(0.52_0.13_32)] transition">
                         <span class="text-sm leading-none">×</span> Borrar Excel
                     </button>
@@ -123,17 +116,12 @@
             <div id="legend" class="max-w-[1420px] mx-auto px-6 md:px-8 pb-4 flex gap-5 flex-wrap items-center"></div>
         </header>
 
-        <div id="trayWrap" class="hidden max-w-[1420px] mx-auto mt-6 px-6 md:px-8">
-            
-            <div id="tray" class="border border-dashed border-ink/20 rounded-3xl px-5 py-4 flex items-center gap-3 flex-wrap bg-white/40 min-h-[3rem]"></div>
-        </div>
-
         <main id="groupsGrid" class="max-w-[1420px] mx-auto px-6 md:px-8 pt-8 grid gap-5 items-start" style="grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));"></main>
 
     </section>
 
     <!-- Tarjeta flotante al pasar el mouse por una persona -->
-    <div id="hoverCard" class="hidden fixed left-6 bottom-6 z-40 bg-ink text-cream rounded-[20px] px-5 py-4 items-center gap-4 shadow-2xl animate-dawn pointer-events-none"></div>
+    <div id="hoverCard" class="hidden fixed left-6 bottom-6 z-40 bg-ink text-cream rounded-[20px] px-5 py-4 items-center gap-4 shadow-2xl animate-rise pointer-events-none"></div>
 
     <script src="app.js"></script>
 </body>
