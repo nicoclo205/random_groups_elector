@@ -6,14 +6,16 @@ lo más parejo posible entre grupos.
 
 ## Estado del proyecto
 
-**Fase actual: interfaz implementada con datos de ejemplo; lógica real pendiente.**
+**Fase actual: interfaz implementada; siguiente paso es la lógica real (parseo del Excel).**
 
 `index.html` y `app.js` ya tienen la interfaz completa (los 3 estados, tarjetas de
-grupo, drag & drop, exportar, animaciones), pero usando `DEMO_PEOPLE` (40 personas
-ficticias) en vez del Excel real. Las funciones que faltan están marcadas con
-`TODO — lo vemos juntos` en `app.js`: `parseExcelFile`, `detectColumns`,
-`computeType`, y revisar `balanceGroups` (hoy es un placeholder razonable pero no
-verificado contra la regla exacta de abajo).
+grupo, drag & drop, exportar, animaciones). Ya **no hay datos de ejemplo** en la
+app (se quitaron `DEMO_PEOPLE` y el botón de "usar datos de ejemplo") — sin un
+Excel real cargado, la app no muestra a nadie. Las funciones que faltan están
+marcadas con `TODO — lo vemos juntos` en `app.js`: `parseExcelFile`,
+`detectColumns`, `computeType`, y revisar `balanceGroups` (hoy es un placeholder
+razonable pero no verificado contra la regla exacta de abajo). El trabajo que
+sigue es justo `parseExcelFile` (leer el archivo con FileReader + SheetJS).
 
 Este archivo se actualiza cada vez que cambien decisiones de diseño, arquitectura
 o alcance. Es la fuente de verdad del proyecto — antes de asumir cómo funciona algo,
@@ -63,7 +65,7 @@ No leer esas dos columnas como si fueran el tipo de la persona de esa fila.
 
 **El tipo de cada persona hay que calcularlo en la app**, contando cuántos "Sí"
 tiene esa persona en cada uno de los 4 bloques de preguntas, y asignando el tipo
-del bloque con más "Sí" (empate = decisión pendiente, ver abajo).
+del bloque con más "Sí" (empate = tipo **mixto**, ver "Decisiones cerradas").
 
 ### Mapeo pregunta → tipo (confirmado con los datos, vía la tabla-leyenda)
 
@@ -115,6 +117,14 @@ Decisiones de stack:
 - **SheetJS** (lectura/escritura de `.xlsx`) también vía CDN, versión pineada.
 - **JS vanilla**, sin framework.
 - **Drag & drop nativo** (HTML5 Drag and Drop API), sin librería externa.
+- **CSS lo menos posible por fuera de Tailwind**: todo lo personalizado (colores
+  por tipo, tipografías, animaciones) vive dentro de un único bloque `@theme` en
+  `index.html`, usando los namespaces nativos de Tailwind v4 (`--color-*`,
+  `--font-*`, `--animate-*` con su `@keyframes` anidado). Eso genera clases como
+  `bg-type-a`, `font-display`, `animate-breathe` automáticamente — no hay clases
+  CSS escritas a mano por fuera de `@theme`. Lo único que Tailwind no puede
+  generar por sí solo son las recetas `@keyframes` en sí (la animación como tal
+  siempre hay que describirla).
 
 > Nota: la decisión original era vendorizar Tailwind y SheetJS localmente
 > (carpeta `vendor/`) pensando en un caso de uso "abrir el HTML localmente sin
@@ -135,6 +145,9 @@ Decisiones de stack:
    - Calcular número de grupos y tamaños (diferencia máx. 1 entre grupos).
    - Agrupar personas por tipo, repartir tipo-round-robin entre grupos evitando
      que un grupo acumule >2 del mismo tipo (3 solo si es inevitable).
+   - Los tipos **mixtos** también se reparten automáticamente entre los grupos
+     (barajeados), igual que cualquier otra persona — no quedan aparte
+     esperando asignación manual.
 6. **Visualización** — tarjetas por grupo, color por tipo, aviso visual si un
    grupo queda con 3 del mismo tipo.
 7. **Ajuste manual** — arrastrar personas entre grupos; la validación de "máx 2
@@ -166,8 +179,13 @@ diseño): `void` (sin datos — pantalla oscura tipo portada con el input de
 archivo y botón de "usar datos de ejemplo") → `reading` (spinner mientras
 "lee" el archivo) → `loaded` (dashboard claro con header pegajoso, contador de
 tamaño, botón "Rebarajar" con giro, exportar CSV/Excel, leyenda, tarjetas de
-grupo, bandeja de "tipos mixtos" sin asignar, tarjeta flotante al pasar el
-mouse sobre una persona con su detalle).
+grupo, tarjeta flotante al pasar el mouse sobre una persona con su detalle).
+
+La interfaz todavía tiene una bandeja ("tray") a la que se puede arrastrar
+manualmente a cualquier persona para dejarla sin asignar — se conserva como
+mecanismo general de ajuste manual, pero ya no es donde caen los tipos mixtos
+por defecto (ver "Decisiones cerradas": ahora el algoritmo los baraja junto
+con todos los demás).
 
 Ya implementado: avatares con iniciales coloreados por tipo (degradado a dos
 colores para tipo mixto), animaciones al arrastrar/soltar y al aparecer las
@@ -183,8 +201,12 @@ editable (nombre/emoji por tipo) — hoy el nombre de cada tipo es fijo
 
 - **Empate entre bloques** al calcular el tipo de una persona (mismo conteo de
   "Sí" en dos o más bloques): la persona queda marcada como **tipo mixto**
-  (ej. "A/B"), visualmente distinta en la UI, y el usuario la asigna a mano al
-  grupo que corresponda en vez de que el algoritmo decida por ella.
+  (ej. "A/B"), visualmente distinta en la UI (avatar con degradado de dos
+  colores). El algoritmo de balanceo **la reparte automáticamente** entre los
+  grupos junto con todos los demás — no queda separada esperando asignación
+  manual. (Decisión revisada: originalmente se había dicho que los mixtos
+  quedarían sin asignar en una bandeja aparte; se cambió porque se prefiere que
+  el algoritmo los baraje también.)
 - Exportación: debe ofrecer **ambas** (Excel y CSV) y también visualización en
   pantalla.
 
