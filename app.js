@@ -1,60 +1,37 @@
-// =====================================================================
-// Creación de Grupos — app.js
-//
-// Este archivo tiene dos partes bien separadas:
-//
-//  1) INTERFAZ (ya implementada): estados de la pantalla, tarjetas de
-//     grupo, drag & drop, exportar, animaciones. Usa datos de EJEMPLO
-//     (DEMO_PEOPLE) mientras no conectamos el Excel real.
-//
-//  2) LÓGICA REAL (marcada con "TODO — lo vemos juntos"): parsear el
-//     Excel de verdad, detectar columnas por texto, calcular el tipo
-//     de cada persona a partir de sus respuestas Sí/No, y el algoritmo
-//     de balanceo definitivo según las reglas del CLAUDE.md. Por ahora
-//     esas funciones son placeholders que devuelven los datos de
-//     ejemplo, para que toda la interfaz ya se pueda probar.
-// =====================================================================
+const el = {
+  cover: document.getElementById("phaseCover"),
+  void: document.getElementById("phase-void"),
+  reading: document.getElementById("phase-reading"),
+  loaded: document.getElementById("phase-loaded"),
+  readingLabel: document.getElementById("readingLabel"),
+  fileInput: document.getElementById("fileInput"),
+  legend: document.getElementById("legend"),
+  groupsGrid: document.getElementById("groupsGrid"),
+  hoverCard: document.getElementById("hoverCard"),
+  sizeVal: document.getElementById("sizeVal"),
+  sizeInc: document.getElementById("sizeInc"),
+  sizeDec: document.getElementById("sizeDec"),
+  reshuffleBtn: document.getElementById("reshuffleBtn"),
+  reshuffleIcon: document.getElementById("reshuffleIcon"),
+  exportCsvBtn: document.getElementById("exportCsvBtn"),
+  exportXlsxBtn: document.getElementById("exportXlsxBtn"),
+  resetBtn: document.getElementById("resetBtn"),
+};
 
 // ---- Catálogo de tipos (colores definidos en index.html vía @theme) ----
 const TYPES = {
-  A: { name: "Clarificador", short: "Clar", chip: "chip-a", line: "line-a", dot: "dot-a" },
-  B: { name: "Ideador", short: "Idea", chip: "chip-b", line: "line-b", dot: "dot-b" },
-  C: { name: "Desarrollador", short: "Desa", chip: "chip-c", line: "line-c", dot: "dot-c" },
-  D: { name: "Implementador", short: "Impl", chip: "chip-d", line: "line-d", dot: "dot-d" },
+  A: { name: "Clarificador", bg: "bg-type-a", fg: "text-type-a-fg", line: "bg-type-a-line", ring: "ring-type-a-line" },
+  B: { name: "Ideador", bg: "bg-type-b", fg: "text-type-b-fg", line: "bg-type-b-line", ring: "ring-type-b-line" },
+  C: { name: "Desarrollador", bg: "bg-type-c", fg: "text-type-c-fg", line: "bg-type-c-line", ring: "ring-type-c-line" },
+  D: { name: "Implementador", bg: "bg-type-d", fg: "text-type-d-fg", line: "bg-type-d-line", ring: "ring-type-d-line" },
 };
-
-// ---- Datos de ejemplo (fICTICIOS — solo para probar la interfaz) ----
-const DEMO_NAMES = [
-  ["Valentina Ríos", "A"], ["Mateo Cárdenas", "B"], ["Salomé Aguirre", "C"], ["Tomás Bermúdez", "D"],
-  ["Isabela Quintero", "A"], ["Emiliano Vega", "B"], ["Antonia Restrepo", "C"], ["Joaquín Pardo", "D"],
-  ["Manuela Ospina", "A"], ["Samuel Echeverri", "B"], ["Luciana Mejía", "C"], ["Bruno Salazar", "D"],
-  ["Camila Arango", "A"], ["Nicolás Zapata", "B"], ["Renata Villamil", "C"], ["Andrés Bustos", "D"],
-  ["Julieta Ferrer", "A"], ["Gabriel Montoya", "B"], ["Amelia Cifuentes", "C"], ["Simón Trujillo", "D"],
-  ["Elena Naranjo", "A"], ["Facundo Peláez", "B"], ["Paulina Escobar", "C"], ["Martín Lozano", "A/C"],
-  ["Sofía Gallego", "A"], ["Lorenzo Duque", "B"], ["Mariana Botero", "C"], ["Iván Céspedes", "D"],
-  ["Catalina Uribe", "A"], ["Dante Molina", "B"], ["Ximena Palacio", "C"], ["Rafael Guzmán", "B/D"],
-  ["Alejandra Serna", "A"], ["Teo Castrillón", "B"], ["Violeta Henao", "A"], ["Nicolás Reina", "B"],
-  ["Daniela Torrado", "D"], ["Esteban Marín", "D"], ["Fernanda Robles", "C/D"], ["Óscar Villegas", "B"],
-];
-
-function buildDemoPeople() {
-  return DEMO_NAMES.map(([name, type], i) => ({
-    id: i + 1,
-    name,
-    type,
-    mixed: type.includes("/"),
-    mail: name.toLowerCase().normalize("NFD")
-      .split("").filter((ch) => { const code = ch.charCodeAt(0); return code < 0x300 || code > 0x36f; }).join("")
-      .replace(/ /g, ".") + "@uni.edu",
-  }));
-}
 
 // ---- Estado global de la app ----
 const state = {
   phase: "void", // "void" | "reading" | "loaded"
   people: [],
   size: 5,
-  assign: {}, // personId -> índice de grupo, o "tray" si es tipo mixto sin asignar
+  assign: {}, // personId -> índice de grupo (todos quedan siempre asignados a alguno)
   dragId: null,
 };
 
@@ -69,8 +46,8 @@ function initials(name) {
 // TODO: leer el archivo con FileReader + XLSX.read (ver CLAUDE.md,
 // ojo que la fila 2 tiene los encabezados reales, no la fila 1).
 function parseExcelFile(file) {
-  console.warn("TODO: parsear el Excel real. Por ahora se usan datos de ejemplo.");
-  return buildDemoPeople();
+  console.warn("TODO: parsear el Excel real. Por ahora no devuelve a nadie.");
+  return [];
 }
 
 // TODO: detectar columnas de Nombre / Correo / las 32 preguntas por
@@ -88,7 +65,9 @@ function computeType(answers) {
 // TODO — placeholder: algoritmo de balanceo provisional, inspirado en
 // el mockup de Claude Design. Hay que revisarlo juntos contra la regla
 // exacta del CLAUDE.md (máx. 2 por tipo, 3 solo si es matemáticamente
-// inevitable) antes de darlo por definitivo.
+// inevitable) antes de darlo por definitivo. Los tipos mixtos se
+// reparten al final entre los grupos más chicos, junto con todos los
+// demás (ver CLAUDE.md — decisión revisada, ya no quedan sin asignar).
 function balanceGroups(people, size) {
   const solo = people.filter((p) => !p.mixed);
   const groupCount = Math.max(1, Math.ceil(people.length / size));
@@ -136,34 +115,14 @@ function balanceGroups(people, size) {
   return assign;
 }
 
-// =====================================================================
-// INTERFAZ (ya implementada)
-// =====================================================================
-
-const el = {
-  void: document.getElementById("phase-void"),
-  reading: document.getElementById("phase-reading"),
-  loaded: document.getElementById("phase-loaded"),
-  readingLabel: document.getElementById("readingLabel"),
-  fileInput: document.getElementById("fileInput"),
-  demoBtn: document.getElementById("demoBtn"),
-  legend: document.getElementById("legend"),
-  trayWrap: document.getElementById("trayWrap"),
-  tray: document.getElementById("tray"),
-  groupsGrid: document.getElementById("groupsGrid"),
-  hoverCard: document.getElementById("hoverCard"),
-  sizeVal: document.getElementById("sizeVal"),
-  sizeInc: document.getElementById("sizeInc"),
-  sizeDec: document.getElementById("sizeDec"),
-  reshuffleBtn: document.getElementById("reshuffleBtn"),
-  reshuffleIcon: document.getElementById("reshuffleIcon"),
-  exportCsvBtn: document.getElementById("exportCsvBtn"),
-  exportXlsxBtn: document.getElementById("exportXlsxBtn"),
-  resetBtn: document.getElementById("resetBtn"),
-};
-
 function setPhase(phase) {
   state.phase = phase;
+  // La capa negra (#phaseCover) solo se desvanece al entrar/salir de
+  // "loaded" (transition-opacity en index.html). Cambiar entre "void"
+  // y "reading" es instantáneo: ambos viven dentro de la misma capa
+  // negra, así que no hay nada que transicionar entre ellos.
+  el.cover.classList.toggle("opacity-0", phase === "loaded");
+  el.cover.classList.toggle("pointer-events-none", phase === "loaded");
   el.void.classList.toggle("hidden", phase !== "void");
   el.reading.classList.toggle("hidden", phase !== "reading");
   el.reading.classList.toggle("flex", phase === "reading");
@@ -189,13 +148,13 @@ function typeChip(person) {
     span.style.background = `linear-gradient(135deg, var(--color-type-${t1.toLowerCase()}) 50%, var(--color-type-${t2.toLowerCase()}) 50%)`;
     span.style.color = "rgba(27,26,24,.62)";
   } else {
-    span.classList.add(TYPES[person.type].chip);
+    span.classList.add(TYPES[person.type].bg, TYPES[person.type].fg);
   }
   span.textContent = initials(person.name);
   return span;
 }
 
-function personRow(person, groupIndex) {
+function personRow(person) {
   const row = document.createElement("div");
   row.className = "flex items-center gap-2.5 pl-2 pr-3 py-2 rounded-xl cursor-grab transition hover:-translate-y-px hover:shadow-md bg-transparent";
   row.draggable = true;
@@ -210,7 +169,7 @@ function personRow(person, groupIndex) {
 
   const short = document.createElement("span");
   short.className = "text-[10.5px] uppercase tracking-wide opacity-70";
-  short.textContent = person.mixed ? person.type + " · Mixto" : person.type + " · " + TYPES[person.type].short;
+  short.textContent = person.type;
   row.appendChild(short);
 
   row.addEventListener("dragstart", (e) => {
@@ -222,14 +181,18 @@ function personRow(person, groupIndex) {
     state.dragId = null;
     row.classList.remove("opacity-40");
   });
-  row.addEventListener("mouseenter", () => showHoverCard(person, groupIndex));
+  row.addEventListener("mouseenter", () => showHoverCard(person));
   row.addEventListener("mouseleave", hideHoverCard);
 
   return row;
 }
 
-function showHoverCard(person, groupIndex) {
-  const where = groupIndex === "tray" ? "Sin asignar" : "Grupo " + String(groupIndex + 1).padStart(2, "0");
+// Lee el grupo actual de `state.assign` en el momento del hover (no un
+// valor capturado al crear la fila), para que siga siendo correcto
+// incluso después de mover a la persona con drag & drop.
+function showHoverCard(person) {
+  const groupIndex = state.assign[person.id];
+  const where = "Grupo " + String(groupIndex + 1).padStart(2, "0");
   const typeLabel = person.mixed
     ? person.type.split("/").map((t) => TYPES[t].name).join(" / ")
     : TYPES[person.type].name;
@@ -262,12 +225,19 @@ function hideHoverCard() {
   el.hoverCard.classList.remove("flex");
 }
 
-function groupCard(members, index) {
-  const card = document.createElement("section");
+// Cuenta tipos y decide si un grupo queda con 3 del mismo tipo.
+function groupMeta(members) {
   const counts = { A: 0, B: 0, C: 0, D: 0 };
   members.forEach((p) => (p.mixed ? p.type.split("/") : [p.type]).forEach((t) => (counts[t] += p.mixed ? 0.5 : 1)));
   const over = Object.values(counts).some((c) => c >= 3);
+  return { counts, over };
+}
 
+function groupCard(members, index) {
+  const card = document.createElement("section");
+  card.dataset.groupIndex = index;
+
+  const { counts, over } = groupMeta(members);
   card.className = `rounded-[18px] border p-4 flex flex-col gap-3.5 bg-white transition-shadow animate-rise ${over ? "border-[var(--color-warn-line)]" : "border-ink/10"}`;
   card.style.animationDelay = index * 60 + "ms";
 
@@ -275,12 +245,32 @@ function groupCard(members, index) {
   head.className = "flex items-baseline justify-between gap-2";
   head.innerHTML = `
     <span class="font-display text-[22px] leading-none tracking-tight">Grupo ${String(index + 1).padStart(2, "0")}</span>
-    <span class="text-[11px] tracking-wide uppercase" style="color:${over ? "var(--color-warn)" : "rgba(27,26,24,.36)"}">${over ? "3 iguales" : members.length + " personas"}</span>
+    <span class="group-status text-[11px] tracking-wide uppercase" style="color:${over ? "var(--color-warn)" : "rgba(27,26,24,.36)"}">${over ? "3 iguales" : members.length + " personas"}</span>
   `;
   card.appendChild(head);
 
   const bars = document.createElement("div");
-  bars.className = "flex gap-1";
+  bars.className = "group-bars flex gap-1";
+  renderBars(bars, counts);
+  card.appendChild(bars);
+
+  const list = document.createElement("div");
+  list.className = "member-list flex flex-col gap-1.5";
+  members.forEach((p) => list.appendChild(personRow(p)));
+  card.appendChild(list);
+
+  card.addEventListener("dragover", (e) => e.preventDefault());
+  card.addEventListener("drop", (e) => {
+    e.preventDefault();
+    const id = Number(e.dataTransfer.getData("text/plain"));
+    if (id) movePerson(id, index);
+  });
+
+  return card;
+}
+
+function renderBars(bars, counts) {
+  bars.innerHTML = "";
   Object.keys(TYPES).forEach((t) => {
     if (!counts[t]) return;
     const bar = document.createElement("span");
@@ -293,58 +283,63 @@ function groupCard(members, index) {
     bar.className = "h-1 rounded-full flex-1 bg-ink/10";
     bars.appendChild(bar);
   }
-  card.appendChild(bars);
-
-  const list = document.createElement("div");
-  list.className = "flex flex-col gap-1.5";
-  members.forEach((p) => list.appendChild(personRow(p, index)));
-  card.appendChild(list);
-
-  card.addEventListener("dragover", (e) => e.preventDefault());
-  card.addEventListener("drop", (e) => {
-    e.preventDefault();
-    const id = Number(e.dataTransfer.getData("text/plain"));
-    if (id) {
-      state.assign[id] = index;
-      render();
-    }
-  });
-
-  return card;
 }
 
+// Actualiza solo el encabezado/barras de un grupo (sin tocar el resto
+// de la pantalla). La usa movePerson() para que arrastrar a alguien no
+// reconstruya ni reanime todas las tarjetas — solo la fila se mueve y
+// los dos grupos afectados actualizan su cuenta.
+function refreshGroupCard(index) {
+  const card = el.groupsGrid.querySelector(`[data-group-index="${index}"]`);
+  if (!card) return;
+  const members = state.people.filter((p) => state.assign[p.id] === index);
+  const { counts, over } = groupMeta(members);
+
+  card.classList.toggle("border-ink/10", !over);
+  card.classList.toggle("border-[var(--color-warn-line)]", over);
+
+  const status = card.querySelector(".group-status");
+  status.textContent = over ? "3 iguales" : members.length + " personas";
+  status.style.color = over ? "var(--color-warn)" : "rgba(27,26,24,.36)";
+
+  renderBars(card.querySelector(".group-bars"), counts);
+}
+
+// Mueve una persona de un grupo a otro sin re-renderizar toda la
+// página: reubica su fila en el DOM y solo refresca los dos grupos
+// involucrados (origen y destino).
+function movePerson(personId, targetIndex) {
+  const sourceIndex = state.assign[personId];
+  if (sourceIndex === targetIndex) return;
+
+  state.assign[personId] = targetIndex;
+
+  const row = el.groupsGrid.querySelector(`[data-person-id="${personId}"]`);
+  const targetList = el.groupsGrid.querySelector(`[data-group-index="${targetIndex}"] .member-list`);
+  if (row && targetList) targetList.appendChild(row);
+
+  if (sourceIndex !== undefined) refreshGroupCard(sourceIndex);
+  refreshGroupCard(targetIndex);
+}
+
+// Reconstruye toda la pantalla: solo hace falta cuando cambia quién
+// participa o cuántos grupos hay (carga inicial, rebarajar, cambiar
+// tamaño). El drag & drop normal usa movePerson(), no esta función.
 function render() {
-  // Leyenda
   el.legend.innerHTML = "";
   Object.entries(TYPES).forEach(([key, t]) => {
     const count = state.people.filter((p) => p.type === key).length;
     const item = document.createElement("div");
     item.className = "flex items-center gap-2.5";
     item.innerHTML = `
-      <span class="w-[11px] h-[11px] rounded-[4px] ${t.dot}"></span>
+      <span class="w-[11px] h-[11px] rounded-[4px] ${t.bg} ring-1 ring-inset ${t.ring}"></span>
       <span class="text-[13px] text-ink/70">${t.name}</span>
       <span class="text-[11.5px] text-ink/35">${count}</span>
     `;
     el.legend.appendChild(item);
   });
 
-  // Bandeja de tipos mixtos sin asignar
-  const trayPeople = state.people.filter((p) => state.assign[p.id] === "tray");
-  el.trayWrap.classList.toggle("hidden", trayPeople.length === 0);
-  el.tray.innerHTML = "";
-  trayPeople.forEach((p) => el.tray.appendChild(personRow(p, "tray")));
-  el.tray.ondragover = (e) => e.preventDefault();
-  el.tray.ondrop = (e) => {
-    e.preventDefault();
-    const id = Number(e.dataTransfer.getData("text/plain"));
-    if (id) {
-      state.assign[id] = "tray";
-      render();
-    }
-  };
-
-  // Tarjetas de grupo
-  const groupCount = Math.max(0, ...Object.values(state.assign).filter((v) => v !== "tray"), -1) + 1;
+  const groupCount = Math.max(0, ...Object.values(state.assign), -1) + 1;
   el.groupsGrid.innerHTML = "";
   for (let i = 0; i < groupCount; i++) {
     const members = state.people.filter((p) => state.assign[p.id] === i);
@@ -363,7 +358,7 @@ function rowsForExport() {
   const out = [["Grupo", "Nombre", "Correo", "Tipo"]];
   state.people.forEach((p) => {
     const g = state.assign[p.id];
-    out.push([g === "tray" ? "Sin asignar" : "Grupo " + String(g + 1).padStart(2, "0"), p.name, p.mail, p.type]);
+    out.push(["Grupo " + String(g + 1).padStart(2, "0"), p.name, p.mail, p.type]);
   });
   return out;
 }
@@ -379,14 +374,21 @@ function downloadBlob(name, blob) {
 
 // ---- Eventos de la interfaz ----
 
-el.demoBtn.addEventListener("click", () => startLoading(buildDemoPeople()));
-
 el.fileInput.addEventListener("change", () => {
   const file = el.fileInput.files[0];
   if (!file) return;
-  // TODO: reemplazar por el resultado real de parseExcelFile(file)
-  // una vez conectemos SheetJS de verdad.
-  startLoading(parseExcelFile(file), `Leyendo ${file.name}…`);
+  
+  const reader = new FileReader();
+  reader.onload = function () {
+    const book = XLSX.read(reader.result, {type: "array"});
+    
+    const sheetName = book.sheetNames[0];
+    const sheet = book.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(sheet, {header: 1, defval: null});
+
+    console.log(rows);
+  };
+
 });
 
 el.sizeInc.addEventListener("click", () => {
